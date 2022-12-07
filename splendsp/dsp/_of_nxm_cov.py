@@ -127,12 +127,12 @@ class OFNxMCov(object):
         bestind = np.argmin(chi2)
         amps_best = amps[bestind]
         chi2_best = chi2[bestind]
-        t0_best = np.arange(self._nbins)[bestind] / fs
+        t0_best = np.arange(self._nbins)[bestind] / self._fs
 
-        if t0_best > self._nbins//2 / fs:
-            t0_best -= self._nbins / fs
+        if t0_best > self._nbins//2 / self._fs:
+            t0_best -= self._nbins / self._fs
 
-        return amps_best, chi2_best, t0_best
+        return amps_best, t0_best, chi2_best
 
     def energy_covariance(self):
         """
