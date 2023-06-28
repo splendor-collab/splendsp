@@ -157,9 +157,11 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, showrawdata=True,
     ax.set_xlabel(labels['xlabel'])
     ax.set_ylabel(labels['ylabel'])
 
+    ctemp = ~np.isnan(arr)
+
     if showrawdata:
         if bins is None:
-            bins = np.histogram_bin_edges(arr, bins=nbins, range=xlims)
+            bins = np.histogram_bin_edges(arr[ctemp], bins=nbins, range=xlims)
 
         hist, _, _ = ax.hist(
             arr,
@@ -171,8 +173,6 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, showrawdata=True,
         )
 
     colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
-
-    ctemp = np.ones(len(arr), dtype=bool)
 
     for ii, cut in enumerate(cuts):
         oldsum = ctemp.sum()
@@ -207,7 +207,7 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, showrawdata=True,
 
 
 def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, showrawdata=True,
-            showeff=True, showlegend=True, labeldict=None, ms=1, a=.3,
+            showeff=True, showlegend=True, labeldict=None, ms=1, a=0.3,
             ax=None, cmap="viridis"):
     """
     Function to plot RQ data as a scatter plot.
@@ -365,19 +365,19 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, showrawdata=True,
 
     if xlims is None:
         if showrawdata and len(cuts)==0:
-            xrange = xvals.max() - xvals.min()
+            xrange = np.nanmax(xvals) - np.nanmin(xvals)
             ax.set_xlim(
                 [
-                    xvals.min() - 0.05 * xrange,
-                    xvals.max() + 0.05 * xrange,
+                    np.nanmin(xvals) - 0.05 * xrange,
+                    np.nanmax(xvals) + 0.05 * xrange,
                 ],
             )
         elif len(cuts)>0:
-            xrange = xvals[cuts[0]].max() - xvals[cuts[0]].min()
+            xrange = np.nanmax(xvals[cuts[0]]) - np.nanmin(xvals[cuts[0]])
             ax.set_xlim(
                 [
-                    xvals[cuts[0]].min() - 0.05 * xrange,
-                    xvals[cuts[0]].max() + 0.05 * xrange,
+                    np.nanmin(xvals[cuts[0]]) - 0.05 * xrange,
+                    np.nanmax(xvals[cuts[0]]) + 0.05 * xrange,
                 ],
             )
     else:
@@ -385,19 +385,19 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, showrawdata=True,
 
     if ylims is None:
         if showrawdata and len(cuts)==0:
-            yrange = yvals.max() - yvals.min()
+            yrange = np.nanmax(yvals) - np.nanmin(yvals)
             ax.set_ylim(
                 [
-                    yvals.min() - 0.05 * yrange,
-                    yvals.max() + 0.05 * yrange,
+                    np.nanmin(yvals) - 0.05 * yrange,
+                    np.nanmax(yvals) + 0.05 * yrange,
                 ],
             )
         elif len(cuts)>0:
-            yrange = yvals[cuts[0]].max() - yvals[cuts[0]].min()
+            yrange = np.nanmax(yvals[cuts[0]]) - np.nanmin(yvals[cuts[0]])
             ax.set_ylim(
                 [
-                    yvals[cuts[0]].min() - 0.05 * yrange,
-                    yvals[cuts[0]].max() + 0.05 * yrange,
+                    np.nanmin(yvals[cuts[0]]) - 0.05 * yrange,
+                    np.nanmax(yvals[cuts[0]]) + 0.05 * yrange,
                 ],
             )
     else:
