@@ -62,8 +62,8 @@ def previewgreyscale(fig, dpi=100):
     ax.imshow(grey, cmap=plt.get_cmap('gray'), interpolation='bilinear')
 
 
-def hist(arr, nbins='auto', xlims=None, cuts=None, lgcrawdata=True,
-         lgceff=True, lgclegend=True, labeldict=None, ax=None,
+def hist(arr, nbins='auto', xlims=None, cuts=None, showrawdata=True,
+         showeff=True, showlegend=True, labeldict=None, ax=None,
          cmap="viridis"):
     """
     Function to plot histogram of RQ data with multiple cuts.
@@ -84,11 +84,11 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, lgcrawdata=True,
         List of masks of values to be plotted. The cuts will be applied
         in the order that they are listed, such that any number of cuts
         can be plotted
-    lgcrawdata : bool, optional
+    showrawdata : bool, optional
         If True, the raw data is plotted
-    lgceff : bool, optional
+    showeff : bool, optional
         If True, the cut efficiencies are printed in the legend.
-    lgclegend : bool, optional
+    showlegend : bool, optional
         If True, the legend is plotted.
     labeldict : dict, optional
         Dictionary to overwrite the labels of the plot. defaults are:
@@ -157,9 +157,11 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, lgcrawdata=True,
     ax.set_xlabel(labels['xlabel'])
     ax.set_ylabel(labels['ylabel'])
 
-    if lgcrawdata:
+    ctemp = ~np.isnan(arr)
+
+    if showrawdata:
         if bins is None:
-            bins = np.histogram_bin_edges(arr, bins=nbins, range=xlims)
+            bins = np.histogram_bin_edges(arr[ctemp], bins=nbins, range=xlims)
 
         hist, _, _ = ax.hist(
             arr,
@@ -167,12 +169,10 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, lgcrawdata=True,
             histtype='step',
             label='Full data',
             linewidth=2,
-            color=plt.cm.get_cmap(cmap)(0),
+            color=plt.get_cmap(cmap)(0),
         )
 
-    colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
-
-    ctemp = np.ones(len(arr), dtype=bool)
+    colors = plt.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
 
     for ii, cut in enumerate(cuts):
         oldsum = ctemp.sum()
@@ -181,7 +181,7 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, lgcrawdata=True,
         cuteff = newsum/oldsum * 100
         label = f"Data passing {labels[f'cut{ii}']} cut"
 
-        if lgceff:
+        if showeff:
             label+=f", Eff = {cuteff:.1f}%"
 
         if bins is None:
@@ -200,15 +200,15 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, lgcrawdata=True,
     ax.grid(linestyle="dashed")
     ax.set_yscale('log')
 
-    if lgclegend:
+    if showlegend:
         ax.legend(loc="best")
 
     return fig, ax
 
 
-def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
-            lgceff=True, lgclegend=True, labeldict=None, ms=1, a=.3, ax=None,
-            cmap="viridis"):
+def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, showrawdata=True,
+            showeff=True, showlegend=True, labeldict=None, ms=1, a=0.3,
+            ax=None, cmap="viridis"):
     """
     Function to plot RQ data as a scatter plot.
 
@@ -228,12 +228,12 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
         List of masks of values to be plotted. The cuts will be applied
         in the order that they are listed, such that any number of cuts
         can be plotted
-    lgcrawdata : bool, optional
+    showrawdata : bool, optional
         If True, the raw data is plotted
-    lgceff : bool, optional
+    showeff : bool, optional
         If True, the efficiencies of each cut, with respect to the data
         that survived the previous cut, are printed in the legend.
-    lgclegend : bool, optional
+    showlegend : bool, optional
         If True, the legend is included in the plot.
     labeldict : dict, optional
         Dictionary to overwrite the labels of the plot. defaults are:
@@ -316,7 +316,7 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
 
     limitcut = xlimitcut & ylimitcut
 
-    if lgcrawdata and len(cuts) > 0: 
+    if showrawdata and len(cuts) > 0:
         ax.scatter(
             xvals[limitcut & ~cuts[0]], yvals[limitcut & ~cuts[0]],
             label='Full Data',
@@ -325,7 +325,7 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
             alpha=a,
         )
 
-    elif lgcrawdata:
+    elif showrawdata:
         ax.scatter(
             xvals[limitcut],
             yvals[limitcut],
@@ -335,7 +335,7 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
             alpha=a,
         )
 
-    colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
+    colors = plt.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
 
     ctemp = np.ones(len(xvals), dtype=bool)
 
@@ -346,7 +346,7 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
         cuteff = newsum/oldsum * 100
         label = f"Data passing {labels[f'cut{ii}']} cut"
 
-        if lgceff:
+        if showeff:
             label+=f", Eff = {cuteff:.1f}%"
 
         cplot = ctemp & limitcut
@@ -364,35 +364,55 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, lgcrawdata=True,
         )
 
     if xlims is None:
-        if lgcrawdata and len(cuts)==0:
-            xrange = xvals.max() - xvals.min()
-            ax.set_xlim([xvals.min() - 0.05 * xrange, xvals.max() + 0.05 * xrange])
+        if showrawdata and len(cuts)==0:
+            xrange = np.nanmax(xvals) - np.nanmin(xvals)
+            ax.set_xlim(
+                [
+                    np.nanmin(xvals) - 0.05 * xrange,
+                    np.nanmax(xvals) + 0.05 * xrange,
+                ],
+            )
         elif len(cuts)>0:
-            xrange = xvals[cuts[0]].max() - xvals[cuts[0]].min()
-            ax.set_xlim([xvals[cuts[0]].min() - 0.05 * xrange, xvals[cuts[0]].max() + 0.05 * xrange])
+            xrange = np.nanmax(xvals[cuts[0]]) - np.nanmin(xvals[cuts[0]])
+            ax.set_xlim(
+                [
+                    np.nanmin(xvals[cuts[0]]) - 0.05 * xrange,
+                    np.nanmax(xvals[cuts[0]]) + 0.05 * xrange,
+                ],
+            )
     else:
         ax.set_xlim(xlims)
 
     if ylims is None:
-        if lgcrawdata and len(cuts)==0:
-            yrange = yvals.max() - yvals.min()
-            ax.set_ylim([yvals.min() - 0.05 * yrange, yvals.max() + 0.05 * yrange])
+        if showrawdata and len(cuts)==0:
+            yrange = np.nanmax(yvals) - np.nanmin(yvals)
+            ax.set_ylim(
+                [
+                    np.nanmin(yvals) - 0.05 * yrange,
+                    np.nanmax(yvals) + 0.05 * yrange,
+                ],
+            )
         elif len(cuts)>0:
-            yrange = yvals[cuts[0]].max() - yvals[cuts[0]].min()
-            ax.set_ylim([yvals[cuts[0]].min() - 0.05 * yrange, yvals[cuts[0]].max() + 0.05 * yrange])
+            yrange = np.nanmax(yvals[cuts[0]]) - np.nanmin(yvals[cuts[0]])
+            ax.set_ylim(
+                [
+                    np.nanmin(yvals[cuts[0]]) - 0.05 * yrange,
+                    np.nanmax(yvals[cuts[0]]) + 0.05 * yrange,
+                ],
+            )
     else:
         ax.set_ylim(ylims)
 
     ax.tick_params(which="both", direction="in", right=True, top=True)
     ax.grid(linestyle="dashed")
 
-    if lgclegend:
+    if showlegend:
         ax.legend(markerscale=6, framealpha=.9, loc='upper left')
 
     return fig, ax
 
-def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
-                xlims=None, ylims=(0, 1), lgceff=True, lgclegend=True,
+def passageplot(arr, cuts, basecut=None, nbins=100, equaldensitybins=False,
+                xlims=None, ylims=(0, 1), showeff=True, showlegend=True,
                 labeldict=None, ax=None, cmap="viridis", showerrorbar=False,
                 nsigmaerrorbar=1):
     """
@@ -413,7 +433,7 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
     nbins : int, str, optional
         This is the same as plt.hist() bins parameter. Defaults is
         'sqrt'.
-    lgcequaldensitybins : bool, optional
+    equaldensitybins : bool, optional
         If set to True, the bin widths are set such that each bin has
         the same number of data points within it. If left as False,
         then a constant bin width is used.
@@ -422,9 +442,9 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
     ylims : list of float, optional
         This is passed to the plot as the y limits. Set to (0, 1) by
         default.
-    lgceff : bool, optional
+    showeff : bool, optional
         If True, the total cut efficiencies are printed in the legend.
-    lgclegend : bool, optional
+    showlegend : bool, optional
         If True, the legend is plotted.
     labeldict : dict, optional
         Dictionary to overwrite the labels of the plot. defaults are:
@@ -498,7 +518,7 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
     if basecut is None:
         basecut = np.ones(len(arr), dtype=bool)
 
-    colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
+    colors = plt.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
 
     ctemp = np.ones(len(arr), dtype=bool) & basecut
 
@@ -516,7 +536,7 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
                 cut,
                 basecut=ctemp & xlimitcut,
                 nbins=nbins,
-                lgcequaldensitybins=lgcequaldensitybins,
+                equaldensitybins=equaldensitybins,
             )
         else:
             passage_output = passagefraction(
@@ -537,7 +557,7 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
         if showerrorbar:
             label += f" +\- {nsigmaerrorbar} sigma"
 
-        if lgceff:
+        if showeff:
             label+=f", Total Passage: {cuteff:.1f}%"
 
         if xlims is None:
@@ -562,8 +582,18 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
             err_top = passage_binned_biased + passage_binned_err * nsigmaerrorbar
             err_bottom = passage_binned_biased - passage_binned_err * nsigmaerrorbar
 
-            err_top = np.pad(err_top, (0, 1), mode='constant', constant_values=(0, err_top[-1]))
-            err_bottom = np.pad(err_bottom, (0, 1), mode='constant', constant_values=(0, err_bottom[-1]))
+            err_top = np.pad(
+                err_top,
+                (0, 1),
+                mode='constant',
+                constant_values=(0, err_top[-1]),
+            )
+            err_bottom = np.pad(
+                err_bottom,
+                (0, 1),
+                mode='constant',
+                constant_values=(0, err_bottom[-1]),
+            )
 
             ax.fill_between(
                 x_binned,
@@ -580,14 +610,15 @@ def passageplot(arr, cuts, basecut=None, nbins=100, lgcequaldensitybins=False,
     ax.tick_params(which="both", direction="in", right=True, top=True)
     ax.grid(linestyle="dashed")
 
-    if lgclegend:
+    if showlegend:
         ax.legend(loc="best")
 
     return fig, ax
 
 
-def densityplot(xvals, yvals, xlims=None, ylims=None, nbins = (500,500), cut=None, labeldict=None,
-                lgclognorm=True, ax=None, cmap='icefire', plot_cut_data=False, basecut=None):
+def densityplot(xvals, yvals, xlims=None, ylims=None, nbins=(500,500),
+                cut=None, labeldict=None, lognorm=True, ax=None,
+                cmap='icefire', plot_cut_data=False, basecut=None):
     """
     Function to plot RQ data as a density plot.
 
@@ -617,7 +648,7 @@ def densityplot(xvals, yvals, xlims=None, ylims=None, nbins = (500,500), cut=Non
             }
         Ex: to change just the title, pass:
         labeldict = {'title' : 'new title'}, to densityplot()
-    lgclognorm : bool, optional
+    lognorm : bool, optional
         If True (default), the color normilization for the density will
         be log scaled, rather than linear.
     ax : axes.Axes object, optional
@@ -719,7 +750,7 @@ def densityplot(xvals, yvals, xlims=None, ylims=None, nbins = (500,500), cut=Non
 
     limitcut = xlimitcut & ylimitcut
 
-    if lgclognorm:
+    if lognorm:
         norm = clrs.LogNorm()
     else:
         norm = clrs.Normalize()
@@ -882,7 +913,9 @@ def conf_ellipse(mu, cov, conf=0.683, ax=None, **kwargs):
         kwargs['fill'] = False
 
     if 'zorder' not in kwargs and len(ax.lines + ax.collections) > 0:
-        kwargs['zorder'] = max(lc.get_zorder() for lc in ax.lines + ax.collections) + 0.1
+        kwargs['zorder'] = max(
+            lc.get_zorder() for lc in ax.lines + ax.collections
+        ) + 0.1
 
     a, v = np.linalg.eig(cov)
     v0 = v[:,0]
