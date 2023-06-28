@@ -169,10 +169,10 @@ def hist(arr, nbins='auto', xlims=None, cuts=None, showrawdata=True,
             histtype='step',
             label='Full data',
             linewidth=2,
-            color=plt.cm.get_cmap(cmap)(0),
+            color=plt.get_cmap(cmap)(0),
         )
 
-    colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
+    colors = plt.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
 
     for ii, cut in enumerate(cuts):
         oldsum = ctemp.sum()
@@ -335,7 +335,7 @@ def scatter(xvals, yvals, xlims=None, ylims=None, cuts=None, showrawdata=True,
             alpha=a,
         )
 
-    colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
+    colors = plt.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
 
     ctemp = np.ones(len(xvals), dtype=bool)
 
@@ -518,7 +518,7 @@ def passageplot(arr, cuts, basecut=None, nbins=100, equaldensitybins=False,
     if basecut is None:
         basecut = np.ones(len(arr), dtype=bool)
 
-    colors = plt.cm.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
+    colors = plt.get_cmap(cmap)(np.linspace(0.1, 0.9, len(cuts)))
 
     ctemp = np.ones(len(arr), dtype=bool) & basecut
 
