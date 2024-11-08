@@ -116,8 +116,9 @@ def slope(x, y, removemeans=True):
     """
 
     x_mean = np.mean(x) if removemeans else 0
+    y_mean = np.mean(y) if removemeans else 0
 
-    return np.sum((x - x_mean) * (y - x_mean)) / np.sum((x - x_mean) ** 2)
+    return np.sum((x - x_mean) * (y - y_mean)) / np.sum((x - x_mean) ** 2)
 
 
 def lowpassfilter(traces, cut_off_freq=100000, fs=625e3, order=1):
