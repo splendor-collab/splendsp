@@ -1572,11 +1572,7 @@ class OFnonlin(object):
         else:
             nmax = t0ind + int(7 * tau_f * self.fs) # 7 falltimes after offset
 
-        nbaseline = int(self.fs * t0) - 1000
-        if nbaseline > 0:
-            pulse = pulse - np.mean(pulse[:nbaseline])
-        else:
-            pulse = pulse - np.mean(pulse[nbaseline + 10000:])
+        pulse = pulse - np.mean(pulse[:nmin])
 
         f = self.freqs
         cf = f > 0
