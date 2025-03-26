@@ -11,7 +11,7 @@ __all__ = [
 
 def foldpsd(psd, fs):
     """
-    Return the one-sided version of the inputted two-sided psd.
+    Return the one-sided version of the inputted two-sided psd. Supports an n-dimensional array outputted by `calc_psd`.
     
     Parameters
     ----------
@@ -19,19 +19,20 @@ def foldpsd(psd, fs):
         A two-sided psd to be converted to one-sided
     fs : float
         The sample rate used for the psd
-            
+
     Returns
     -------
     f : ndarray
         The frequencies corresponding to the outputted one-sided psd
     psd_folded : ndarray
         The one-sided (folded over) psd corresponding to the inputted two-sided psd
-            
+
     """
-    
-    psd_folded = np.copy(psd[:len(psd)//2+1])
-    psd_folded[1:len(psd)//2+(len(psd))%2] *= 2.0
-    f = rfftfreq(len(psd),d=1.0/fs)
+
+    psd_len = psd.shape[-1]
+    psd_folded = np.copy(psd[...,:psd_len//2 + 1])
+    psd_folded[..., 1:psd_len//2 + (psd_len)%2] *= 2.0
+    f = rfftfreq(psd_len, d=1.0/fs)
     
     return f, psd_folded
 
