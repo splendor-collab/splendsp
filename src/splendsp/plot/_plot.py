@@ -5,7 +5,7 @@ from matplotlib import colors as clrs
 from matplotlib.patches import Ellipse
 from scipy import stats
 import types
-from splendsp.cut import passagefraction
+from splendsp.cut import passagefraction, inrange
 
 
 __all__ = [
