@@ -537,7 +537,7 @@ def passageplot(arr, cuts, basecut=None, nbins=100, equaldensitybins=False,
                 cut,
                 basecut=ctemp & xlimitcut,
                 nbins=nbins,
-                equaldensitybins=equaldensitybins,
+                lgcequaldensitybins=equaldensitybins,
             )
         else:
             passage_output = passagefraction(
