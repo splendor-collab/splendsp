@@ -1169,7 +1169,7 @@ class OFnonlin(object):
         tau_r = self.taurise
         return self.twopole(A, tau_r, tau_f, t0)
 
-    def residuals(self, params):
+    def residuals(self, params, fcutoff):
         """
         Function to calculate the weighted residuals to be minimized
 
@@ -1177,6 +1177,10 @@ class OFnonlin(object):
         ----------
         params : tuple
             Tuple containing fit parameters
+        fcutoff : float, NoneType
+            The frequency above which data is ignored in fit, to remove
+            any bias from highest frequencies. Default is None, meaning
+            all frequencies are considered.
 
         Returns
         -------
@@ -1204,9 +1208,15 @@ class OFnonlin(object):
         else:
             A, tau_f, t0 = params
             delta = (self.data - self.onepole(A, tau_f, t0))
-        z1d = np.zeros(self.data.size * 2, dtype=np.float64)
-        z1d[0:z1d.size:2] = delta.real / self.error
-        z1d[1:z1d.size:2] = delta.imag / self.error
+
+        if fcutoff is None:
+            z1d = np.zeros(self.data.size * 2, dtype=np.float64)
+            z1d[0:z1d.size:2] = delta.real / self.error
+            z1d[1:z1d.size:2] = delta.imag / self.error
+        else:
+            z1d = np.zeros(np.sum(self.freqs < fcutoff) * 2, dtype=np.float64)
+            z1d[0:z1d.size:2] = (delta.real / self.error)[self.freqs < fcutoff]
+            z1d[1:z1d.size:2] = (delta.imag / self.error)[self.freqs < fcutoff]
 
         return z1d
 
@@ -1241,9 +1251,13 @@ class OFnonlin(object):
             )
             
         return sum(
-            (np.abs(self.data - model)**2 / self.error**2
-        ) / (
-            len(self.data) - self.dof)[self.freqs < fcutoff]
+            (
+                (
+                    np.abs(self.data - model)**2 / self.error**2
+            ) / (
+                len(self.data) - self.dof
+                )
+            )[self.freqs < fcutoff]
         )
 
     def fit_falltimes(self, pulse, npolefit=1, errscale=1, guess=None,
@@ -1485,6 +1499,7 @@ class OFnonlin(object):
             loss='linear',
             xtol=2.3e-16,
             ftol=2.3e-16,
+            args=(fcutoff, ),
         )
         variables = result['x']
         success = result['success']
@@ -1501,7 +1516,8 @@ class OFnonlin(object):
                     variables[5],
                     variables[6],
                     variables[7],
-                )
+                ),
+                fcutoff=fcutoff,
             )
         elif (self.npolefit==3):
             chi2 = self.calcchi2(
@@ -1512,7 +1528,8 @@ class OFnonlin(object):
                     variables[3],
                     variables[4],
                     variables[5],
-                )
+                ),
+                fcutoff=fcutoff,
             )
         elif (self.npolefit==2):
             chi2 = self.calcchi2(
@@ -1521,7 +1538,8 @@ class OFnonlin(object):
                     variables[1],
                     variables[2],
                     variables[3],
-                )
+                ),
+                fcutoff=fcutoff,
             )
         else:
             chi2 = self.calcchi2(
@@ -1529,7 +1547,8 @@ class OFnonlin(object):
                     variables[0],
                     variables[1],
                     variables[2],
-                )
+                ),
+                fcutoff=fcutoff,
             )
 
         jac = result['jac']
