@@ -1169,7 +1169,7 @@ class OFnonlin(object):
         tau_r = self.taurise
         return self.twopole(A, tau_r, tau_f, t0)
 
-    def residuals(self, params):
+    def residuals(self, params, fcutoff):
         """
         Function to calculate the weighted residuals to be minimized
 
@@ -1177,6 +1177,10 @@ class OFnonlin(object):
         ----------
         params : tuple
             Tuple containing fit parameters
+        fcutoff : float, NoneType
+            The frequency above which data is ignored in fit, to remove
+            any bias from highest frequencies. Default is None, meaning
+            all frequencies are considered.
 
         Returns
         -------
@@ -1204,14 +1208,20 @@ class OFnonlin(object):
         else:
             A, tau_f, t0 = params
             delta = (self.data - self.onepole(A, tau_f, t0))
-        z1d = np.zeros(self.data.size * 2, dtype=np.float64)
-        z1d[0:z1d.size:2] = delta.real / self.error
-        z1d[1:z1d.size:2] = delta.imag / self.error
+
+        if fcutoff is None:
+            z1d = np.zeros(self.data.size * 2, dtype=np.float64)
+            z1d[0:z1d.size:2] = delta.real / self.error
+            z1d[1:z1d.size:2] = delta.imag / self.error
+        else:
+            z1d = np.zeros(np.sum(self.freqs < fcutoff) * 2, dtype=np.float64)
+            z1d[0:z1d.size:2] = (delta.real / self.error)[self.freqs < fcutoff]
+            z1d[1:z1d.size:2] = (delta.imag / self.error)[self.freqs < fcutoff]
 
         return z1d
 
 
-    def calcchi2(self, model):
+    def calcchi2(self, model, fcutoff=None):
         """
         Function to calculate the reduced chi square
 
@@ -1220,6 +1230,10 @@ class OFnonlin(object):
         model : ndarray
             Array corresponding to pulse function (twopole or onepole)
             evaluated at the optimal values
+        fcutoff : float, NoneType
+            The frequency above which data is ignored in fit, to remove
+            any bias from highest frequencies. Default is None, meaning
+            all frequencies are considered.
 
         Returns
         -------
@@ -1228,15 +1242,27 @@ class OFnonlin(object):
 
         """
 
+        if fcutoff is None:
+
+            return sum(
+                (np.abs(self.data - model)**2 / self.error**2
+            ) / (
+                len(self.data) - self.dof)
+            )
+            
         return sum(
-            np.abs(self.data - model)**2 / self.error**2
-        ) / (
-            len(self.data) - self.dof
+            (
+                (
+                    np.abs(self.data - model)**2 / self.error**2
+            ) / (
+                len(self.data) - self.dof
+                )
+            )[self.freqs < fcutoff]
         )
 
     def fit_falltimes(self, pulse, npolefit=1, errscale=1, guess=None,
                       bounds=None, taurise=None, scale_amplitude=True,
-                      lgcfullrtn=False, lgcplot=False):
+                      lgcfullrtn=False, lgcplot=False, fcutoff=None):
         """
         Function to do the fit
 
@@ -1284,6 +1310,10 @@ class OFnonlin(object):
             matrix, and chi squared statistic are returned as well.
         lgcplot : bool, optional
             If True, diagnostic plots are returned.
+        fcutoff : float, NoneType
+            The frequency above which data is ignored in fit, to remove
+            any bias from highest frequencies. Default is None, meaning
+            all frequencies are considered.
 
         Returns
         -------
@@ -1469,6 +1499,7 @@ class OFnonlin(object):
             loss='linear',
             xtol=2.3e-16,
             ftol=2.3e-16,
+            args=(fcutoff, ),
         )
         variables = result['x']
         success = result['success']
@@ -1485,7 +1516,8 @@ class OFnonlin(object):
                     variables[5],
                     variables[6],
                     variables[7],
-                )
+                ),
+                fcutoff=fcutoff,
             )
         elif (self.npolefit==3):
             chi2 = self.calcchi2(
@@ -1496,7 +1528,8 @@ class OFnonlin(object):
                     variables[3],
                     variables[4],
                     variables[5],
-                )
+                ),
+                fcutoff=fcutoff,
             )
         elif (self.npolefit==2):
             chi2 = self.calcchi2(
@@ -1505,7 +1538,8 @@ class OFnonlin(object):
                     variables[1],
                     variables[2],
                     variables[3],
-                )
+                ),
+                fcutoff=fcutoff,
             )
         else:
             chi2 = self.calcchi2(
@@ -1513,7 +1547,8 @@ class OFnonlin(object):
                     variables[0],
                     variables[1],
                     variables[2],
-                )
+                ),
+                fcutoff=fcutoff,
             )
 
         jac = result['jac']
@@ -1521,13 +1556,13 @@ class OFnonlin(object):
         errors = np.sqrt(cov.diagonal())
 
         if lgcplot:
-            self._plotnonlin(pulse, variables, errors)
+            self._plotnonlin(pulse, variables, errors, fcutoff)
         if lgcfullrtn:
             return variables, errors, cov, chi2, success
         else:
             return variables
 
-    def _plotnonlin(self, pulse, params, errors):
+    def _plotnonlin(self, pulse, params, errors, fcutoff):
         """
         Diagnostic plotting of non-linear pulse fitting
 
@@ -1539,6 +1574,9 @@ class OFnonlin(object):
             Tuple containing best fit parameters
         errors : tuple
             The corresponding statistical errors of the fit parameters
+        fcutoff : float, NoneType
+            The frequency above which data is ignored in fit, to remove
+            any bias from highest frequencies.
 
         """
 
@@ -1608,6 +1646,9 @@ class OFnonlin(object):
             axes[0][0].loglog(
                 f, np.abs(self.twopole(*variables))[cf], c='r', label='Fit',
             )
+
+        if fcutoff is not None:
+            axes[0][0].axvline(fcutoff, color='k', linestyle='dashed')
 
         axes[0][0].loglog(f, error, c='b', label='$\sqrt{PSD}$', alpha=0.75)
         axes[0][0].tick_params(which='both', direction='in', right=True, top=True)
@@ -1686,6 +1727,8 @@ class OFnonlin(object):
         axes[1][1].plot([], [], c='r', label='Best Fit')
         axes[1][1].plot([], [], c='g', label='Raw Data')
         axes[1][1].plot([], [], c='b', label='$\sqrt{PSD}$')
+        if fcutoff is not None:
+            axes[1][1].plot([], [], c='k', linestyle='dashed', label='Cutoff Freq.')
 
         for ii in range(len(params)):
             axes[1][1].plot([], [], linestyle=' ')
@@ -1718,14 +1761,15 @@ class OFnonlin(object):
                 f'τ$_r$: ({tau_r * 1e6:.4f} +\- {tau_r_err * 1e6:.4f}) [$\mu$s]',
             ]
         lines = axes[1][1].get_lines()
+        ndata = 3 if fcutoff is None else 4
         legend1 = plt.legend(
-            [lines[i] for i in range(3, 3 + len(params))],
+            [lines[i] for i in range(ndata, ndata + len(params))],
             [labels[ii] for ii  in range(len(params))],
             loc=1,
         )
         legend2 = plt.legend(
-            [lines[i] for i in range(0, 3)],
-            ['Best Fit', 'Raw Data', '$\sqrt{PSD}$'],
+            [lines[i] for i in range(0, ndata)],
+            ['Best Fit', 'Raw Data', '$\sqrt{PSD}$', 'Cutoff Freq.'],
             loc=2,
         )
 
